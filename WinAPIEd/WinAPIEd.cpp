@@ -41,6 +41,7 @@ DWORD SelectedItem = 0;
 stack <fPOINT> stackW;
 HDC hdc_m;
 HDC hdc_mm;
+HDC hdc;
 
 MyMenu m1;
 MyPrim	Model[100];
@@ -80,7 +81,7 @@ void drawModel(HDC hdc)
 }
 
 void onMouseLUp(HWND hwnd, LPARAM lParam) {
-	HDC hdc = GetDC(hwnd);
+	//HDC hdc = GetDC(hwnd);
 	tagPOINT Point;
 	Point.x = lParam % 0x10000;
 	Point.y = lParam / 0x10000;
@@ -99,14 +100,16 @@ void onMouseLUp(HWND hwnd, LPARAM lParam) {
 	Model[PrimCount].p2.x = pe.x;
 	Model[PrimCount].p2.y = pe.y;
 
+	Model[PrimCount].PrimType = _line;
+
 	PrimCount++;
 
-	ReleaseDC(hwnd, hdc);
+	//ReleaseDC(hwnd, hdc);
 	InvalidateRect(hwnd, NULL, TRUE);
 }
 
 void onMouseLDown(HWND hwnd, LPARAM lParam) {
-	HDC hdc = GetDC(hwnd); 
+	//HDC hdc = GetDC(hwnd); 
 	tagPOINT Point;
 
 	Point.x = lParam % 0x10000;
@@ -117,17 +120,15 @@ void onMouseLDown(HWND hwnd, LPARAM lParam) {
 	pb=Point;
 	pe = pb;
 
-	ReleaseDC(hwnd, hdc);
+	//ReleaseDC(hwnd, hdc);
 
 }
 
 void onMouseMove(HWND hwnd, LPARAM lParam) {
 	
 	if (mouseLDownF) {
-		HDC hdc = GetDC(hwnd);
-		int last;
-		last = SetROP2(hdc, R2_NOTXORPEN);
-
+	
+		SetROP2(hdc, R2_NOTXORPEN);
 		// Стираем предыдущую линию
 		MoveToEx(hdc, pb.x, pb.y, NULL);
 		LineTo(hdc, pe.x, pe.y);
@@ -137,11 +138,8 @@ void onMouseMove(HWND hwnd, LPARAM lParam) {
 		
 		MoveToEx(hdc, pb.x, pb.y, NULL);
 		LineTo(hdc, pe.x, pe.y);
-		ReleaseDC(hwnd, hdc);
+		//ReleaseDC(hwnd, hdc);
 	}
-		
-	
-	
 }
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
@@ -173,19 +171,26 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg,
 	WPARAM wParam, LPARAM lParam) {
 	PAINTSTRUCT ps;
 	RECT r;
-	HDC hdc;
+	//HDC hdc;
 	HPEN lPen;
 	HPEN lPen2;
 	HBRUSH hbr;
 	HGDIOBJ hOld2, hOld;
+
+
 	switch (msg) {
 	case WM_PAINT:
 		GetClientRect(hwnd, &r);
 		hdc = BeginPaint(hwnd, &ps);
-
+		SetROP2(hdc, R2_COPYPEN);
+		lPen = CreatePen(PS_SOLID, 3, RGB(0, 0, 255));
+		SelectObject(hdc, lPen);
 		for (int i = 0; i < PrimCount; i++) {
-			MoveToEx(hdc, Model[i].p1.x, Model[i].p1.y, NULL);
-			LineTo(hdc, Model[i].p2.x, Model[i].p2.y);
+			if (Model[i].PrimType == _line) {
+				MoveToEx(hdc, Model[i].p1.x, Model[i].p1.y, NULL);
+				LineTo(hdc, Model[i].p2.x, Model[i].p2.y);
+			}
+			
 		}
 
 		//hdc_m = hdc;
