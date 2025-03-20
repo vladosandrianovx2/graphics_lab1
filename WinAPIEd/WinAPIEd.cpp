@@ -18,6 +18,8 @@ enum TypeObj { _line = 0, _rect, _ark };
 enum TypeMenu { _hor = 0, _vert };
 CONST CHAR* m1text[4]{ "line" ,"rect","ellips", "unzoom" };
 bool mouseLDownF;
+HPEN lPen = CreatePen(PS_SOLID, 2, RGB(0, 0, 255));
+HPEN lPen2 = CreatePen(PS_SOLID, 3, RGB(0, 255, 0));
 
 struct fPOINT {
 	DOUBLE x, y;
@@ -26,6 +28,7 @@ struct fPOINT {
 struct MyPrim {
 	fPOINT p1, p2;
 	TypeObj PrimType;
+	bool hatch;
 };
 
 struct MyMenu {
@@ -42,10 +45,14 @@ stack <fPOINT> stackW;
 HDC hdc_m;
 HDC hdc_mm;
 HDC hdc;
+HBRUSH hbr = GetStockBrush(NULL_BRUSH);
+HBRUSH h_hbr = CreateHatchBrush(HS_BDIAGONAL, RGB(0, 0, 255));
 
 MyMenu m1;
 MyPrim	Model[100];
+TypeObj objType = _line;
 INT PrimCount = 0;
+bool hatch_m = FALSE;
 
 DWORD xmin = 5;
 DWORD ymin = 65;
@@ -100,8 +107,9 @@ void onMouseLUp(HWND hwnd, LPARAM lParam) {
 	Model[PrimCount].p2.x = pe.x;
 	Model[PrimCount].p2.y = pe.y;
 
-	Model[PrimCount].PrimType = _line;
-
+	//Model[PrimCount].PrimType = _line;
+	Model[PrimCount].PrimType = objType;
+	Model[PrimCount].hatch = hatch_m;
 	PrimCount++;
 
 	//ReleaseDC(hwnd, hdc);
@@ -115,6 +123,12 @@ void onMouseLDown(HWND hwnd, LPARAM lParam) {
 	Point.x = lParam % 0x10000;
 	Point.y = lParam / 0x10000;
 
+	if (Point.y < ymin) {
+		
+		mouseLDownF = FALSE;
+		return;
+	}
+
 	mouseLDownF = TRUE;
 
 	pb=Point;
@@ -127,7 +141,7 @@ void onMouseLDown(HWND hwnd, LPARAM lParam) {
 void onMouseMove(HWND hwnd, LPARAM lParam) {
 	
 	if (mouseLDownF) {
-	
+		SelectObject(hdc, lPen2);
 		SetROP2(hdc, R2_NOTXORPEN);
 		// Стираем предыдущую линию
 		MoveToEx(hdc, pb.x, pb.y, NULL);
@@ -160,6 +174,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 		WS_OVERLAPPEDWINDOW | WS_VISIBLE,
 		100, 100, 750, 750, NULL, NULL, hInstance, NULL);
 
+	CreateWindowW(L"BUTTON", L"Line", WS_VISIBLE | WS_CHILD, 10, 10, 80, 30, hwnd, (HMENU)1, hInstance, NULL);
+	CreateWindowW(L"BUTTON", L"Rect", WS_VISIBLE | WS_CHILD, 100, 10, 80, 30, hwnd, (HMENU)2, hInstance, NULL);
+	CreateWindowW(L"BUTTON", L"Ellips", WS_VISIBLE | WS_CHILD, 190, 10, 80, 30, hwnd, (HMENU)3, hInstance, NULL);
+	CreateWindowW(L"BUTTON", L"Штриховка", WS_VISIBLE | WS_CHILD, 280, 10, 80, 30, hwnd, (HMENU)4, hInstance, NULL);
+	
+
 	while (GetMessage(&msg, NULL, 0, 0)) {
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
@@ -172,9 +192,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg,
 	PAINTSTRUCT ps;
 	RECT r;
 	//HDC hdc;
-	HPEN lPen;
-	HPEN lPen2;
-	HBRUSH hbr;
+	
+	
 	HGDIOBJ hOld2, hOld;
 
 
@@ -183,12 +202,33 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg,
 		GetClientRect(hwnd, &r);
 		hdc = BeginPaint(hwnd, &ps);
 		SetROP2(hdc, R2_COPYPEN);
-		lPen = CreatePen(PS_SOLID, 3, RGB(0, 0, 255));
+		
 		SelectObject(hdc, lPen);
 		for (int i = 0; i < PrimCount; i++) {
+
+			if (Model[i].hatch) {
+				SelectBrush(hdc,h_hbr);
+			}
+			else {
+				SelectBrush(hdc, hbr);
+			}
+
 			if (Model[i].PrimType == _line) {
 				MoveToEx(hdc, Model[i].p1.x, Model[i].p1.y, NULL);
 				LineTo(hdc, Model[i].p2.x, Model[i].p2.y);
+			}
+			else if (Model[i].PrimType == _rect) {
+				MoveToEx(hdc, Model[i].p1.x, Model[i].p1.y, NULL);
+				//hbr = CreateHatchBrush(HS_BDIAGONAL, RGB(0, 0, 255));
+				//hbr = GetStockBrush(NULL_BRUSH);
+				//SelectBrush(hdc, hbr);
+				Rectangle(hdc, Model[i].p1.x, Model[i].p1.y, Model[i].p2.x, Model[i].p2.y);
+			}
+			else if (Model[i].PrimType == _ark){
+				MoveToEx(hdc, Model[i].p1.x, Model[i].p1.y, NULL);
+				//hbr = GetStockBrush(NULL_BRUSH);
+				//SelectBrush(hdc, hbr);
+				Ellipse(hdc, Model[i].p1.x, Model[i].p1.y, Model[i].p2.x, Model[i].p2.y);
 			}
 			
 		}
@@ -213,6 +253,32 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg,
 		break;
 	case WM_RBUTTONUP:
 		//onMouseRUp(hwnd, lParam);
+		break;
+	case WM_COMMAND:
+		// Обработка нажатий на кнопки
+		switch (LOWORD(wParam)) {
+		case 1: 
+			//Cursor = с_line;
+			objType = _line;
+			break;
+		case 2: 
+			//Cursor = с_rect;
+			objType = _rect;
+			break;
+		case 3: 
+			//Cursor = с_ark;
+			objType = _ark;
+			break;
+		case 4:
+			if (!hatch_m) {
+				hatch_m = TRUE;
+			}
+			else {
+				hatch_m = FALSE;
+			}
+			
+			//hbr = CreateHatchBrush(HS_BDIAGONAL, RGB(0, 0, 255));
+		}
 		break;
 	}
 	return DefWindowProcW(hwnd, msg, wParam, lParam);
