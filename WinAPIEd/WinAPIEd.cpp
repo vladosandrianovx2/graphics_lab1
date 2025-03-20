@@ -18,7 +18,7 @@ enum TypeObj { _line = 0, _rect, _ark };
 enum TypeMenu { _hor = 0, _vert };
 CONST CHAR* m1text[4]{ "line" ,"rect","ellips", "unzoom" };
 bool mouseLDownF;
-HPEN lPen = CreatePen(PS_SOLID, 2, RGB(0, 0, 255));
+HPEN lPen = CreatePen(PS_SOLID, 2, RGB(255, 0, 255));
 HPEN lPen2 = CreatePen(PS_SOLID, 3, RGB(0, 255, 0));
 
 struct fPOINT {
